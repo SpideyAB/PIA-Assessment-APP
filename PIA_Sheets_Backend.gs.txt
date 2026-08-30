@@ -1,0 +1,143 @@
+/**
+ * PIA Cabin Crew Assessment Tool — Google Sheets Backend
+ * ========================================================
+ * SETUP (one-time, ~5 minutes):
+ *
+ * 1. Go to https://sheets.google.com and create a new blank spreadsheet.
+ *    Name it something like "PIA Cabin Crew Assessment Data".
+ *
+ * 2. In the menu, click Extensions > Apps Script.
+ *
+ * 3. Delete any starter code in the editor, and paste in this ENTIRE file.
+ *
+ * 4. Click the Save icon (or Ctrl+S).
+ *
+ * 5. Click "Deploy" (top right) > "New deployment".
+ *    - Click the gear icon next to "Select type" and choose "Web app".
+ *    - Description: "PIA Assessment Backend" (or anything).
+ *    - Execute as: "Me".
+ *    - Who has access: "Anyone".
+ *    - Click "Deploy".
+ *
+ * 6. Google will ask you to authorize the script — click "Authorize access",
+ *    choose your Google account, click "Advanced" if it warns you, then
+ *    "Go to (project name) (unsafe)", then "Allow". This warning is normal
+ *    for any script you write yourself; it's just Google being cautious.
+ *
+ * 7. Copy the "Web app URL" it gives you (starts with
+ *    https://script.google.com/macros/s/...../exec).
+ *
+ * 8. Paste that URL into the PIA Assessment Scoring Tool when it asks for
+ *    your backend link (Setup screen, first time you open the tool on each
+ *    device). Every assessor's device needs the SAME url.
+ *
+ * That's it — every score, batch, and archived record will now be stored as
+ * rows in a sheet called "Data" in this spreadsheet, viewable any time.
+ *
+ * If you ever need to redeploy after editing this script, use
+ * "Deploy > Manage deployments > Edit > New version" so the URL stays the
+ * same and nobody has to re-enter it.
+ * ========================================================
+ */
+
+var SHEET_NAME = "Data";
+
+function getSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(["key", "value"]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function findRow_(sheet, key) {
+  var finder = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 1), 1).findText("^" + key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + "$", false);
+  if (finder) return finder.getRow();
+  return -1;
+}
+
+function getValue_(sheet, key) {
+  var row = findRow_(sheet, key);
+  if (row !== -1) return sheet.getRange(row, 2).getValue();
+  return null;
+}
+
+function setValue_(sheet, key, value) {
+  var row = findRow_(sheet, key);
+  if (row === -1) {
+    sheet.appendRow([key, value]);
+  } else {
+    sheet.getRange(row, 2).setValue(value);
+  }
+}
+
+function deleteValue_(sheet, key) {
+  var row = findRow_(sheet, key);
+  if (row !== -1) sheet.deleteRow(row);
+}
+
+function listKeys_(sheet, prefix) {
+  var data = sheet.getDataRange().getValues();
+  var keys = [];
+  for (var i = 1; i < data.length; i++) {
+    var k = String(data[i][0]);
+    if (!prefix || k.indexOf(prefix) === 0) keys.push(k);
+  }
+  return keys;
+}
+
+function respond_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var sheet = getSheet_();
+    var action = e.parameter.action;
+    if (action === "get") {
+      var value = getValue_(sheet, e.parameter.key);
+      return respond_({ ok: true, key: e.parameter.key, value: value });
+    }
+    if (action === "list") {
+      var keys = listKeys_(sheet, e.parameter.prefix || "");
+      return respond_({ ok: true, keys: keys });
+    }
+    if (action === "ping") {
+      return respond_({ ok: true, pong: Date.now() });
+    }
+    return respond_({ ok: false, error: "unknown action" });
+  } catch (err) {
+    return respond_({ ok: false, error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var sheet = getSheet_();
+    var body = JSON.parse(e.postData.contents);
+    var action = body.action;
+    if (action === "set") {
+      setValue_(sheet, body.key, body.value);
+      return respond_({ ok: true });
+    }
+    if (action === "delete") {
+      deleteValue_(sheet, body.key);
+      return respond_({ ok: true });
+    }
+    return respond_({ ok: false, error: "unknown action" });
+  } catch (err) {
+    return respond_({ ok: false, error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}

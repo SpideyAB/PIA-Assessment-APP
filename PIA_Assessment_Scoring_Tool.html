@@ -1,0 +1,1507 @@
+<div id="pia-root"></div>
+<style>
+  :root{
+    --navy:#0B2545; --navy-2:#123A6B; --gold:#B08D57; --gold-2:#C9A76A;
+    --bg:#F5F6F8; --card:#FFFFFF; --line:#E4E7EC; --ink:#101828; --sub:#5B6472;
+    --pass:#1D7A3E; --pass-bg:#E7F5EC; --fail:#B3261E; --fail-bg:#FCEAE9;
+    --pending:#9A6B00; --pending-bg:#FCF3D9;
+    --radius:14px;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --shadow-sm: 0 2px 6px rgba(16,24,40,.04);
+    --shadow-md: 0 4px 14px rgba(16,24,40,.08);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  #pia-root{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--bg); min-height:100vh;
+    display:flex; flex-direction:column; max-width:560px; margin:0 auto;
+    padding-bottom:calc(78px + env(safe-area-inset-bottom, 0px)); position:relative;
+  }
+  @media (max-width:380px){
+    .scale5 button{padding:6px 1px 5px;}
+    .scale5 button .n{font-size:14px;}
+    .scale5 button .d{font-size:7.5px; line-height:1.05;}
+  }
+  .topbar{
+    background:linear-gradient(135deg,var(--navy) 0%, var(--navy-2) 100%);
+    color:#fff; padding:14px 16px 12px; position:sticky; top:0; z-index:20;
+    box-shadow:0 2px 10px rgba(11,37,69,.18);
+    transition: backdrop-filter 0.3s ease;
+  }
+  .topbar .row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .brand{display:flex; flex-direction:column; line-height:1.15;}
+  .brand .k{font-size:10.5px; letter-spacing:.12em; color:var(--gold-2); font-weight:700; text-transform:uppercase;}
+  .brand .t{font-size:16.5px; font-weight:800;}
+  .sync{display:flex; align-items:center; gap:6px; font-size:11px; color:#E9EDF3;}
+  .dot{width:8px; height:8px; border-radius:50%; background:#4CD98A; box-shadow:0 0 0 3px rgba(76,217,138,.25); transition: background 0.3s ease, box-shadow 0.3s ease;}
+  .dot.busy{background:#F4C542; box-shadow:0 0 0 3px rgba(244,197,66,.25); animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .batchline{margin-top:9px; display:flex; align-items:center; gap:8px; font-size:11.5px; color:#C9D3E3;}
+  .statuspill{font-size:9.5px; font-weight:800; padding:2px 8px; border-radius:100px; text-transform:uppercase; letter-spacing:.03em;}
+  .statuspill.active{background:#E7F0FF; color:#1D4E9B;}
+  .statuspill.completed{background:var(--pass-bg); color:var(--pass);}
+
+  .content{flex:1; padding:14px 14px 8px; animation: fadeIn 0.25s var(--ease-out);}
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .section-title{font-size:13px; font-weight:800; color:var(--sub); text-transform:uppercase; letter-spacing:.06em; margin:18px 2px 8px;}
+  .section-title:first-child{margin-top:2px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:12px; box-shadow:var(--shadow-sm); transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), border-color 0.2s ease;}
+  .card:hover{box-shadow:var(--shadow-md);}
+  .muted{color:var(--sub); font-size:13px; line-height:1.5;}
+  .flagnote{background:var(--pending-bg); color:var(--pending); border:1px solid #F0DE9C; border-radius:10px; padding:9px 11px; font-size:12.5px; margin-top:8px; line-height:1.5;}
+  .archived-banner{background:#EEF1F6; border:1px solid var(--line); border-radius:12px; padding:14px; text-align:center; color:var(--sub); font-size:13px; margin-bottom:12px; line-height:1.6;}
+
+  .weightrow{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); transition: background 0.15s ease;}
+  .weightrow:last-child{border-bottom:none;}
+  .weightrow .lbl{flex:1; font-size:14px; font-weight:600;}
+  .weightrow .tag{font-size:10px; font-weight:700; padding:2px 7px; border-radius:100px; margin-left:6px;}
+  .tag.approved{background:#E7F0FF; color:#1D4E9B;}
+  .tag.proposed{background:var(--pending-bg); color:var(--pending);}
+  .weightrow input[type=number]{width:58px; text-align:center; border:1px solid var(--line); border-radius:8px; padding:7px 4px; font-size:14px; font-weight:700; transition: border-color 0.2s ease, box-shadow 0.2s ease;}
+  .weightrow input[type=number]:focus{border-color:var(--navy); outline:none; box-shadow:0 0 0 3px rgba(11,37,69,.12);}
+  .weightrow .pct{font-size:13px; color:var(--sub);}
+  .weighttotal{display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:2px solid var(--ink);}
+  .weighttotal b{font-size:15px;}
+  .val{font-size:17px; font-weight:800; transition: color 0.2s ease;}
+  .val.ok{color:var(--pass);} .val.bad{color:var(--fail);}
+  .field{margin-bottom:10px;}
+  .field label{display:block; font-size:12.5px; font-weight:700; color:var(--sub); margin-bottom:5px;}
+  .field input{width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:15px; transition: border-color 0.2s ease, box-shadow 0.2s ease;}
+  .field input:focus{border-color:var(--navy); outline:none; box-shadow:0 0 0 3px rgba(11,37,69,.12);}
+  .field input:disabled{background:#F2F3F5; color:var(--sub);}
+  
+  .btn{border:none; border-radius:11px; padding:11px 14px; font-size:14.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; transition: transform 0.15s var(--ease-out), background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;}
+  .btn:active{transform: scale(0.97);}
+  .btn-primary{background:var(--navy); color:#fff; width:100%; box-shadow:0 2px 8px rgba(11,37,69,.2);}
+  .btn-primary:hover{background:var(--navy-2); box-shadow:0 4px 12px rgba(11,37,69,.28);}
+  .btn-primary:disabled{opacity:.4; cursor:not-allowed; transform:none;}
+  .btn-gold{background:var(--gold); color:var(--navy); width:100%; box-shadow:0 2px 8px rgba(176,141,87,.25);}
+  .btn-gold:hover{background:var(--gold-2);}
+  .btn-ghost{background:#fff; color:var(--fail); border:1px solid #F0C9C7;}
+  .btn-ghost:hover{background:#FDF5F5;}
+  .btn-outline{background:#fff; color:var(--navy); border:1.5px solid var(--navy); width:100%;}
+  .btn-outline:hover{background:#F0F4F9;}
+
+  .candlist{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  .chip{display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:100px; padding:6px 8px 6px 12px; font-size:13.5px; font-weight:600; transition: transform 0.15s ease, border-color 0.15s ease;}
+  .chip:hover{border-color:var(--gold); transform:translateY(-1px);}
+  .chip button{background:none; border:none; color:var(--fail); font-weight:800; font-size:15px; line-height:1; padding:2px 4px; cursor:pointer; transition: transform 0.15s ease;}
+  .chip button:hover{transform:scale(1.25);}
+  .addrow{display:flex; gap:8px; margin-top:10px;}
+  .addrow input{flex:1;}
+  .addrow input:first-child{max-width:70px; text-align:center;}
+
+  .grid8{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:8px;}
+  .candbtn{aspect-ratio:1; border-radius:12px; border:1.5px solid var(--line); background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-weight:800; font-size:18px; color:var(--ink); position:relative; cursor:pointer; transition: transform 0.15s var(--ease-out), border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;}
+  .candbtn:hover{border-color:var(--navy); transform:translateY(-2px); box-shadow:var(--shadow-sm);}
+  .candbtn:active{transform:scale(0.95);}
+  .candbtn small{font-size:9.5px; font-weight:600; color:var(--sub); max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .candbtn.active{border-color:var(--navy); background:var(--navy); color:#fff; box-shadow:0 3px 10px rgba(11,37,69,.25);}
+  .candbtn.active small{color:#C9D3E3;}
+  .candbtn.disabled{opacity:.35; pointer-events:none;}
+  .selnum{position:absolute; top:4px; right:5px; width:16px; height:16px; border-radius:50%; background:var(--gold); color:var(--navy); font-size:9.5px; font-weight:900; display:flex; align-items:center; justify-content:center; animation: popIn 0.2s var(--ease-out);}
+  @keyframes popIn{ from{transform:scale(0.4);} to{transform:scale(1);} }
+
+  .tabstrip{display:flex; gap:8px; margin:2px 0 12px;}
+  .tabchip{flex:1; text-align:center; padding:10px 4px; border-radius:11px; border:1.5px solid var(--line); background:#fff; font-weight:800; font-size:14px; position:relative; cursor:pointer; transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;}
+  .tabchip:hover{border-color:var(--navy); transform:translateY(-1px);}
+  .tabchip:active{transform:scale(0.97);}
+  .tabchip.active{background:var(--navy); color:#fff; border-color:var(--navy); box-shadow:0 2px 8px rgba(11,37,69,.2);}
+  .tabchip .chk{position:absolute; top:-6px; right:-6px; background:var(--pass); color:#fff; width:17px; height:17px; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center; border:2px solid var(--bg); animation: popIn 0.2s var(--ease-out);}
+  .tabchip.unsaved{border-color:var(--pending);}
+  .tabchip .chk.unsaved-dot{background:var(--pending);}
+  .progressline{font-size:12px; color:var(--sub); margin:2px 2px 12px; text-align:center;}
+
+  .scoring-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;}
+  .scoring-head .who{font-size:15px; font-weight:800;}
+  .scoring-head .prog{font-size:12px; color:var(--sub);}
+  .complabel{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;}
+  .complabel .name{font-size:14.5px; font-weight:700;}
+  .complabel .w{font-size:11.5px; color:var(--sub); font-weight:600;}
+  .scale5{display:flex; gap:6px;}
+  .scale5 button{flex:1; border:1.5px solid var(--line); background:#fff; border-radius:10px; padding:10px 2px 8px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; transition: transform 0.15s var(--ease-out), background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;}
+  .scale5 button:hover{border-color:var(--navy); transform:translateY(-2px); box-shadow:0 3px 8px rgba(16,24,40,.06);}
+  .scale5 button:active{transform:scale(0.94);}
+  .scale5 button .n{font-size:16px; font-weight:800; color:var(--ink); transition: color 0.15s ease;}
+  .scale5 button .d{font-size:8.6px; color:var(--sub); text-align:center; line-height:1.15; font-weight:600; transition: color 0.15s ease;}
+  .scale5 button.sel{background:var(--navy); border-color:var(--navy); box-shadow:0 3px 10px rgba(11,37,69,.22);}
+  .scale5 button.sel .n, .scale5 button.sel .d{color:#fff;}
+  .comp-card{border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:14px;}
+  .comp-card:last-child{border-bottom:none; margin-bottom:0; padding-bottom:0;}
+  .assessorbar{display:flex; gap:8px; margin-bottom:4px;}
+  .assessorbar input{flex:1;}
+  .linkbtn{background:none; border:none; color:var(--navy); font-weight:700; font-size:12.5px; text-decoration:underline; padding:4px 0; cursor:pointer; transition: color 0.15s ease, opacity 0.15s ease;}
+  .linkbtn:hover{color:var(--navy-2); opacity:0.85;}
+
+  .summarybar{display:flex; gap:8px; margin-bottom:12px;}
+  .summarybar .stat{flex:1; background:#fff; border:1px solid var(--line); border-radius:12px; padding:11px 4px; text-align:center; box-shadow:var(--shadow-sm); transition: transform 0.2s ease;}
+  .summarybar .stat:hover{transform:translateY(-1px);}
+  .summarybar .stat .n{font-size:19px; font-weight:800;}
+  .summarybar .stat .n.pass{color:var(--pass);}
+  .summarybar .stat .n.fail{color:var(--fail);}
+  .summarybar .stat .l{font-size:9.5px; color:var(--sub); font-weight:700; text-transform:uppercase; margin-top:2px; letter-spacing:.03em;}
+
+  .lb-row{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px 13px; margin-bottom:9px; cursor:pointer; box-shadow:var(--shadow-sm); transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), border-color 0.2s ease;}
+  .lb-row:hover{transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--navy-2);}
+  .lb-row:active{transform:scale(0.99);}
+  .lb-rank{font-size:13px; font-weight:800; color:var(--sub); width:20px;}
+  .lb-num{width:38px; height:38px; border-radius:10px; background:var(--bg); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; flex-shrink:0; transition: background 0.2s ease, color 0.2s ease;}
+  .lb-row:hover .lb-num{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .lb-mid{flex:1; min-width:0;}
+  .lb-mid .nm{font-weight:700; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .lb-mid .meta{font-size:11.5px; color:var(--sub); margin-top:1px;}
+  .lb-right{text-align:right; flex-shrink:0;}
+  .lb-right .score{font-size:17px; font-weight:800;}
+  .badge{font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:100px; margin-top:3px; display:inline-block; transition: transform 0.2s ease;}
+  .badge.pass{background:var(--pass-bg); color:var(--pass);}
+  .badge.fail{background:var(--fail-bg); color:var(--fail);}
+  .badge.pending{background:var(--pending-bg); color:var(--pending);}
+  .detail{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); animation: fadeIn 0.2s var(--ease-out);}
+  .detail-row{display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; color:var(--sub);}
+  .detail-row b{color:var(--ink); font-weight:700;}
+
+  .batchcard{background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:13px 14px; margin-bottom:10px; cursor:pointer; box-shadow:var(--shadow-sm); transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), border-color 0.2s ease;}
+  .batchcard:hover{transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--navy);}
+  .batchcard:active{transform:scale(0.99);}
+  .batchcard .top{display:flex; justify-content:space-between; align-items:center;}
+  .batchcard .name{font-weight:800; font-size:15px;}
+  .batchcard .meta{font-size:11.5px; color:var(--sub); margin-top:4px;}
+  .backrow{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .backbtn{background:none; border:none; font-size:13.5px; font-weight:700; color:var(--navy); padding:4px 0; cursor:pointer; transition: transform 0.15s ease;}
+  .backbtn:hover{transform:translateX(-3px);}
+
+  .tabbar{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:560px; background:#fff; border-top:1px solid var(--line); display:flex; z-index:30; box-shadow:0 -2px 14px rgba(16,24,40,.08);}
+  .tabbar button{flex:1; border:none; background:none; padding:10px 4px calc(12px + env(safe-area-inset-bottom, 0px)); display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--sub); font-size:10.5px; font-weight:700; cursor:pointer; transition: color 0.2s ease, transform 0.15s ease;}
+  .tabbar button:hover{color:var(--navy); transform:translateY(-1px);}
+  .tabbar button:active{transform:scale(0.94);}
+  .tabbar button.active{color:var(--navy);}
+  .tabbar button.active .ic{transform:scale(1.15); transition: transform 0.2s var(--ease-out);}
+  .tabbar .ic{font-size:18px; transition: transform 0.2s var(--ease-out);}
+
+  .empty{text-align:center; padding:34px 16px; color:var(--sub); font-size:13.5px;}
+  .toast{position:fixed; bottom:88px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px; border-radius:100px; font-size:13px; font-weight:600; z-index:50; opacity:0; transition:opacity .25s var(--ease-out), transform .25s var(--ease-out); pointer-events:none; white-space:nowrap; max-width:88%; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,.2);}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
+</style>
+
+<script>
+(function(){
+
+  var SCALE = [
+    {n:1, d:"Significant concern"},
+    {n:2, d:"Below standard"},
+    {n:3, d:"Meets standard"},
+    {n:4, d:"Strong"},
+    {n:5, d:"Exceptional"}
+  ];
+  var DEFAULT_COMPETENCIES = [
+    {key:"comm",      label:"Communication & Language",         weight:20, src:"approved"},
+    {key:"safety",    label:"Safety & Emergency Response",      weight:15, src:"approved"},
+    {key:"integrity", label:"Integrity & Character",            weight:15, src:"approved"},
+    {key:"service",   label:"Customer Service",                 weight:12, src:"approved"},
+    {key:"ei",        label:"EI & Composure",                   weight:12, src:"approved"},
+    {key:"teamwork",  label:"Teamwork & Collaboration",         weight:14, src:"proposed"},
+    {key:"problem",   label:"Problem-Solving & Decision-Making",weight:12, src:"proposed"}
+  ];
+  var DEFAULT_THRESHOLD = 70;
+  var DEFAULT_MANAGER_PIN = "1234";
+  var DEFAULT_CANDIDATES = [1,2,3,4,5,6,7,8].map(function(n){ return {id:"c"+n, number:n, name:""}; });
+  var MAX_GROUP = 3;
+
+  var BUILD_VERSION = "v5.0";
+
+  // ================================================================
+  // If you have a Google Sheets backend set up (see PIA_Sheets_Backend.gs.txt),
+  // paste its Web App URL between the quotes below and save this file. Doing
+  // this once means every assessor's device works immediately with zero setup
+  // -- nobody has to paste in a URL on their own phone. Leave it blank ("") to
+  // use the in-app setup screen instead (handy for quick testing, but paste it
+  // in here for the version you actually hand out on assessment day).
+  var SHEETS_BACKEND_URL = "";
+  // ================================================================
+
+  var state = {
+    tab: "score",
+    batch: "", batchLoaded: false, batchStatus: "active",
+    config: null, candidates: [],
+    assessorName: "",
+    myGroup: [], groupConfirmed: false, activeGroupCandId: null,
+    draftScoresByCand: {},
+    myScoresByCandidate: {},
+    results: [], expandedResultId: null,
+    registry: [],
+    viewingArchiveBatch: null, archiveCandidates: [], expandedArchiveId: null,
+    confirmingArchive: false,
+    exportData: null,
+    storageStatus: "checking", // "checking" | "ok" | "failed" | "needs-setup"
+    storageFailReason: "",
+    sheetsUrlInput: "", sheetsSetupError: "",
+    managerPin: null, unlockPinInput: "", showPinSettings: false,
+    showDiagnostics: false, diagnostics: null,
+    syncing: false
+  };
+
+  function slug(s){ return String(s||"").trim().toLowerCase().replace(/\s+/g,"_").replace(/[^a-zA-Z0-9_\-]/g,"").slice(0,60); }
+  function root(){ return document.getElementById("pia-root"); }
+
+  // ---------- storage transport ----------
+  // "native": Claude's built-in artifact storage (only works when this page is rendered
+  //   inside Claude's own app/website).
+  // "sheets": a Google Sheets backend (works from this file opened anywhere -- downloaded,
+  //   emailed, opened from a USB stick, etc. -- as long as the device has internet access).
+  // The backend URL for "sheets" mode is a per-device setting (not assessment data), so it's
+  // fine to keep it in localStorage even though the app's actual scoring data never is.
+  var LS_KEY = "pia_sheets_backend_url";
+  var transport = null;      // "native" | "sheets"
+  var sheetsUrl = null;
+
+  function getSavedSheetsUrl(){
+    try{ return window.localStorage.getItem(LS_KEY); }catch(e){ return null; }
+  }
+  function saveSheetsUrl(url){
+    try{ window.localStorage.setItem(LS_KEY, url); return true; }catch(e){ return false; }
+  }
+
+  async function sGet(key){
+    if(transport === "native"){
+      try{ var r = await window.storage.get(key, true); return r ? r.value : null; }catch(e){ return null; }
+    }
+    if(transport === "sheets"){
+      try{
+        var res = await fetch(sheetsUrl + "?action=get&key=" + encodeURIComponent(key));
+        var data = await res.json();
+        return (data && data.ok && data.value != null) ? data.value : null;
+      }catch(e){ return null; }
+    }
+    return null;
+  }
+  async function sSet(key, value){
+    if(transport === "native"){
+      try{ var r = await window.storage.set(key, value, true); return !!r; }catch(e){ return false; }
+    }
+    if(transport === "sheets"){
+      try{
+        var res = await fetch(sheetsUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight that Apps Script can't answer
+          body: JSON.stringify({ action:"set", key:key, value:value })
+        });
+        var data = await res.json();
+        return !!(data && data.ok);
+      }catch(e){ return false; }
+    }
+    return false;
+  }
+  async function sList(prefix){
+    if(transport === "native"){
+      try{ var r = await window.storage.list(prefix, true); return r && r.keys ? r.keys : []; }catch(e){ return []; }
+    }
+    if(transport === "sheets"){
+      try{
+        var res = await fetch(sheetsUrl + "?action=list&prefix=" + encodeURIComponent(prefix));
+        var data = await res.json();
+        return (data && data.ok && data.keys) ? data.keys : [];
+      }catch(e){ return []; }
+    }
+    return [];
+  }
+
+  // Hard connectivity self-test: writes a value, reads it back, and confirms it round-trips.
+  // If this fails, nothing in the app will ever sync between devices no matter what else is
+  // fixed, so we surface it loudly instead of letting every save silently pretend to work.
+  async function testStorageConnectivity(){
+    if(typeof window.storage !== "undefined" && window.storage){
+      transport = "native";
+    } else if(SHEETS_BACKEND_URL && SHEETS_BACKEND_URL.indexOf("http") === 0){
+      transport = "sheets";
+      sheetsUrl = SHEETS_BACKEND_URL;
+    } else {
+      var saved = getSavedSheetsUrl();
+      if(!saved){
+        return { ok:false, needsSetup:true, reason:"" };
+      }
+      transport = "sheets";
+      sheetsUrl = saved;
+    }
+    try{
+      var testKey = "pia-connectivity-test";
+      var probe = "ping-" + Date.now();
+      var setResult = await sSet(testKey, probe);
+      if(!setResult){
+        return { ok:false, needsSetup:(transport==="sheets"), reason: transport==="sheets"
+          ? "Couldn't write to your Google Sheet backend. Double-check the Web App URL is correct and was deployed with access set to \"Anyone\"."
+          : "The write to shared storage did not confirm. Scores entered here will not be visible to other devices." };
+      }
+      var getBack = await sGet(testKey);
+      if(getBack !== probe){
+        return { ok:false, needsSetup:(transport==="sheets"), reason: transport==="sheets"
+          ? "Your Google Sheet backend accepted a write but didn't read it back correctly. Check the Apps Script deployment."
+          : "Shared storage accepted a write but couldn't read it back correctly. Live sync is unreliable in this session." };
+      }
+      return { ok:true };
+    }catch(e){
+      return { ok:false, needsSetup:(transport==="sheets"), reason:"Connection error: " + (e && e.message ? e.message : String(e)) };
+    }
+  }
+
+  var toastTimer = null;
+  function toast(msg){
+    var e = document.getElementById("pia-toast");
+    if(!e) return;
+    e.textContent = msg; e.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ e.classList.remove("show"); }, 2000);
+  }
+
+  // ---------- manager pin ----------
+  async function loadManagerPin(){
+    var raw = await sGet("pia-manager-pin");
+    state.managerPin = raw || DEFAULT_MANAGER_PIN;
+    return state.managerPin;
+  }
+  async function setManagerPin(newPin){
+    var ok = await sSet("pia-manager-pin", newPin);
+    if(ok){ state.managerPin = newPin; toast("Manager PIN updated"); }
+    else{ toast("\u26A0\uFE0F Couldn't save new PIN"); }
+    render();
+  }
+  async function attemptUnlockBatch(){
+    if(state.unlockPinInput === (state.managerPin || DEFAULT_MANAGER_PIN)){
+      state.syncing = true; render();
+      var ok = await upsertRegistry({batch: state.batch, status: "active"});
+      state.syncing = false;
+      if(ok){
+        state.batchStatus = "active";
+        state.unlockPinInput = "";
+        toast("Batch unlocked for corrections");
+      } else {
+        toast("\u26A0\uFE0F Unlock failed to save \u2014 try again");
+      }
+      render();
+    } else {
+      toast("Incorrect PIN");
+      state.unlockPinInput = "";
+      render();
+    }
+  }
+
+  // ---------- registry ----------
+  async function loadRegistry(){
+    var raw = await sGet("pia-batch-registry");
+    var reg = [];
+    if(raw){ try{ reg = JSON.parse(raw); }catch(e){ reg = []; } }
+    state.registry = reg;
+    return reg;
+  }
+  async function upsertRegistry(entryPatch){
+    var reg = await loadRegistry();
+    var idx = -1;
+    for(var i=0;i<reg.length;i++){ if(reg[i].batch === entryPatch.batch){ idx = i; break; } }
+    if(idx === -1){ reg.push(entryPatch); }
+    else{ reg[idx] = Object.assign({}, reg[idx], entryPatch); }
+    reg.sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+    var ok = await sSet("pia-batch-registry", JSON.stringify(reg));
+    if(ok) state.registry = reg;
+    return ok;
+  }
+
+  // ---------- batch join ----------
+  async function joinBatch(code){
+    state.syncing = true; render();
+    var b = slug(code) || "default";
+    state.batch = b;
+    await sSet("pia-active-batch", b);
+
+    var cfg = await sGet(b + "::config");
+    var isNew = !cfg;
+    if(!cfg){ cfg = JSON.stringify({competencies: DEFAULT_COMPETENCIES, threshold: DEFAULT_THRESHOLD}); await sSet(b + "::config", cfg); }
+    var cands = await sGet(b + "::candidates");
+    if(!cands){ cands = JSON.stringify(DEFAULT_CANDIDATES); await sSet(b + "::candidates", cands); }
+    try{ state.config = JSON.parse(cfg); }catch(e){ state.config = {competencies: DEFAULT_COMPETENCIES, threshold: DEFAULT_THRESHOLD}; }
+    try{ state.candidates = JSON.parse(cands); }catch(e){ state.candidates = DEFAULT_CANDIDATES; }
+
+    var reg = await loadRegistry();
+    var entry = null;
+    for(var i=0;i<reg.length;i++){ if(reg[i].batch === b){ entry = reg[i]; break; } }
+    if(!entry){
+      entry = {batch:b, createdAt:Date.now(), status:"active", candidateCount: state.candidates.length};
+      await upsertRegistry(entry);
+    }
+    state.batchStatus = entry.status || "active";
+
+    state.batchLoaded = true;
+    state.myGroup = []; state.groupConfirmed = false; state.activeGroupCandId = null;
+    state.draftScoresByCand = {}; state.myScoresByCandidate = {};
+    state.syncing = false;
+    if(state.tab === "results") await refreshResults();
+    render();
+  }
+
+  function suggestNextBatchCode(){
+    if(!state.registry.length) return "";
+    var last = state.registry[0].batch;
+    var m = last.match(/^(.*?)(\d+)$/);
+    if(m) return m[1] + (parseInt(m[2],10)+1);
+    return last + "-2";
+  }
+
+  async function saveConfig(){
+    if(state.batchStatus === "completed"){ toast("This batch is archived and read-only"); return; }
+    state.syncing = true; render();
+    var ok = await sSet(state.batch + "::config", JSON.stringify(state.config));
+    state.syncing = false;
+    toast(ok ? "Settings saved & synced" : "\u26A0\uFE0F Save FAILED \u2014 settings not synced");
+    render();
+  }
+  async function saveCandidates(){
+    if(state.batchStatus === "completed"){ toast("This batch is archived and read-only"); return; }
+    state.syncing = true; render();
+    var ok = await sSet(state.batch + "::candidates", JSON.stringify(state.candidates));
+    if(ok) await upsertRegistry({batch: state.batch, candidateCount: state.candidates.length});
+    state.syncing = false;
+    if(!ok) toast("\u26A0\uFE0F Save FAILED \u2014 candidate list not synced");
+    render();
+  }
+
+  // ---------- scoring ----------
+  // Consolidated storage: one key per candidate holding every assessor's score for that
+  // candidate, e.g. {"<assessor-slug>": {assessor, scores, ts}, ...}. Avoids relying on
+  // window.storage.list() key-format assumptions, which was the source of the leaderboard bug.
+  function candidateScoresKey(candId){ return state.batch + "::scores::" + candId; }
+
+  async function getCandidateScoreBlob(candId){
+    var raw = await sGet(candidateScoresKey(candId));
+    if(!raw) return {};
+    try{ return JSON.parse(raw) || {}; }catch(e){ return {}; }
+  }
+
+  // Best-effort recovery of scores saved under the old (pre-fix) per-assessor key format,
+  // so a batch scored before this update isn't lost. Tries both key-string interpretations
+  // since window.storage.list()'s exact return format wasn't reliably matching our assumption.
+  async function legacyEntriesForCandidate(batchCode, candId){
+    var prefix = batchCode + "::score::" + candId + "::";
+    var out = [];
+    try{
+      var keys = await sList(prefix);
+      for(var i=0;i<keys.length;i++){
+        var k = keys[i];
+        var raw = await sGet(k);
+        if(!raw) raw = await sGet(prefix + k);
+        if(raw){ try{ var p = JSON.parse(raw); if(p && p.scores) out.push(p); }catch(e){} }
+      }
+    }catch(e){}
+    return out;
+  }
+
+  async function loadMyExistingScore(candId){
+    if(!state.assessorName.trim()){ state.draftScoresByCand[candId] = {}; return; }
+    var blob = await getCandidateScoreBlob(candId);
+    var mySlug = slug(state.assessorName);
+    var mine = blob[mySlug];
+    if(!mine){
+      var legacy = await legacyEntriesForCandidate(state.batch, candId);
+      for(var i=0;i<legacy.length;i++){ if(slug(legacy[i].assessor) === mySlug){ mine = legacy[i]; break; } }
+    }
+    if(mine){ state.draftScoresByCand[candId] = Object.assign({}, mine.scores); state.myScoresByCandidate[candId] = mine; }
+    else { state.draftScoresByCand[candId] = {}; }
+  }
+
+  async function persistScore(candId, opts){
+    opts = opts || {};
+    var comps = state.config.competencies;
+    var d = state.draftScoresByCand[candId] || {};
+    for(var i=0;i<comps.length;i++){ if(!d[comps[i].key]) return { ok:false, reason:"incomplete" }; }
+    if(!opts.silent){ state.syncing = true; render(); }
+    var payload = { scores: d, ts: Date.now(), assessor: state.assessorName.trim() };
+    var blob = await getCandidateScoreBlob(candId);
+    blob[slug(state.assessorName)] = payload;
+    var ok = await sSet(candidateScoresKey(candId), JSON.stringify(blob));
+    if(!opts.silent) state.syncing = false;
+    if(!ok) return { ok:false, reason:"write-failed" };
+    state.myScoresByCandidate[candId] = payload;
+    return { ok:true };
+  }
+
+  async function submitScore(candId){
+    if(state.batchStatus === "completed"){ toast("This batch is archived and read-only"); return; }
+    if(!state.assessorName.trim()){ toast("Enter your name first"); return; }
+    var comps = state.config.competencies;
+    var d = state.draftScoresByCand[candId] || {};
+    for(var i=0;i<comps.length;i++){ if(!d[comps[i].key]){ toast("Rate every competency before saving"); return; } }
+    var result = await persistScore(candId);
+    if(!result.ok){
+      toast("\u26A0\uFE0F Save FAILED \u2014 not synced. Check the red banner at the top.");
+      state.storageStatus = "failed";
+      state.storageFailReason = "A score write to shared storage was rejected. Reload and confirm you're on the live shared link, then re-enter this score.";
+      render();
+      return;
+    }
+    toast("Saved & synced");
+    render();
+  }
+
+  async function submitScoreSilently(candId){
+    if(state.batchStatus === "completed" || !state.assessorName.trim()) return;
+    var result = await persistScore(candId, { silent:true });
+    if(!result.ok && result.reason === "write-failed"){
+      toast("\u26A0\uFE0F Auto-save failed for #" + (state.candidates.find(function(c){return c.id===candId;})||{}).number + " \u2014 go back and tap Save score manually");
+      state.storageStatus = "failed";
+      state.storageFailReason = "An auto-save write to shared storage was rejected.";
+    } else if(result.ok){
+      toast("Auto-saved #" + (state.candidates.find(function(c){return c.id===candId;})||{}).number);
+    }
+    render();
+  }
+
+  // ---------- results aggregation ----------
+  async function computeResultsForBatch(batchCode, config, candidates){
+    var comps = config.competencies;
+    var threshold = config.threshold;
+    var results = [];
+    for(var ci=0; ci<candidates.length; ci++){
+      var c = candidates[ci];
+      var blob = await sGet(batchCode + "::scores::" + c.id);
+      var byAssessor = {};
+      if(blob){ try{ byAssessor = JSON.parse(blob) || {}; }catch(e){ byAssessor = {}; } }
+      var legacy = await legacyEntriesForCandidate(batchCode, c.id);
+      var migrated = false;
+      legacy.forEach(function(le){
+        var ls = slug(le.assessor);
+        if(!byAssessor[ls]){ byAssessor[ls] = le; migrated = true; }
+      });
+      if(migrated){ await sSet(batchCode + "::scores::" + c.id, JSON.stringify(byAssessor)); }
+      var entries = Object.keys(byAssessor).map(function(k){ return byAssessor[k]; });
+      results.push(computeOneResult(c, entries, comps, threshold));
+    }
+    results.sort(function(a,b){
+      if(a.total==null && b.total==null) return a.number-b.number;
+      if(a.total==null) return 1; if(b.total==null) return -1;
+      return b.total - a.total;
+    });
+    return results;
+  }
+
+  function computeOneResult(c, entries, comps, threshold){
+    var perComp = {};
+    comps.forEach(function(comp){
+      var vals = entries.map(function(e){ return e.scores[comp.key]; }).filter(function(v){ return v; });
+      perComp[comp.key] = vals.length ? (vals.reduce(function(a,b){return a+b;},0)/vals.length) : null;
+    });
+    var weightedTotal = 0, anyMissing = false;
+    comps.forEach(function(comp){
+      if(perComp[comp.key] == null){ anyMissing = true; return; }
+      weightedTotal += (perComp[comp.key]/5) * comp.weight;
+    });
+    var total100 = entries.length ? Math.round(weightedTotal*10)/10 : null;
+    return {
+      id: c.id, number: c.number, name: c.name,
+      assessorCount: entries.length, entries: entries, perComp: perComp,
+      total: total100, complete: entries.length>0 && !anyMissing,
+      pass: total100 != null ? total100 >= threshold : null
+    };
+  }
+
+  async function refreshResults(){
+    if(!state.batch) return;
+    state.syncing = true; render();
+    state.results = await computeResultsForBatch(state.batch, state.config, state.candidates);
+    state.syncing = false; render();
+  }
+
+  // ---------- archiving ----------
+  // Archiving used window.confirm() previously, which Claude's artifact sandbox blocks
+  // (native dialogs are disabled), so the archive action silently did nothing. Replaced
+  // with an in-app two-step confirmation instead.
+  function requestArchiveConfirm(){
+    state.confirmingArchive = true;
+    render();
+  }
+  function cancelArchiveConfirm(){
+    state.confirmingArchive = false;
+    render();
+  }
+
+  async function archiveBatch(){
+    state.confirmingArchive = false;
+    state.syncing = true; render();
+    if(state.activeGroupCandId) await autoSaveIfComplete(state.activeGroupCandId); // catch any last unsaved-but-complete rating
+    var results = await computeResultsForBatch(state.batch, state.config, state.candidates);
+    var records = results.map(function(r){
+      return {
+        batch: state.batch, id: r.id, number: r.number, name: r.name,
+        competencies: state.config.competencies, perComp: r.perComp,
+        total: r.total, threshold: state.config.threshold, pass: r.pass,
+        assessorCount: r.assessorCount, entries: r.entries, archivedAt: Date.now()
+      };
+    });
+    // Single consolidated key per batch -- no list() needed to read it back.
+    var archOk = await sSet("archive::" + state.batch, JSON.stringify(records));
+    if(!archOk){
+      state.syncing = false;
+      toast("\u26A0\uFE0F Archive FAILED to save \u2014 batch NOT locked, nothing written to database. Try again.");
+      render();
+      return;
+    }
+    var scoredCount = records.filter(function(r){return r.total!=null;}).length;
+    var passCount = records.filter(function(r){return r.pass;}).length;
+    var regOk = await upsertRegistry({
+      batch: state.batch, status: "completed", completedAt: Date.now(),
+      candidateCount: state.candidates.length, scoredCount: scoredCount, passCount: passCount
+    });
+    if(!regOk){
+      state.syncing = false;
+      toast("\u26A0\uFE0F Archived scorecards saved, but the batch registry update failed \u2014 it may not appear in Database yet. Try Refresh in Database tab.");
+      render();
+      return;
+    }
+    state.batchStatus = "completed";
+    state.syncing = false;
+    toast("Batch archived to HR database");
+    render();
+  }
+
+  function startNewBatchFlow(){
+    var suggestion = suggestNextBatchCode();
+    state.batchLoaded = false; state.batch = ""; state.tab = "score";
+    render();
+    setTimeout(function(){
+      var inp = document.getElementById("join-batch-input");
+      if(inp && suggestion) inp.value = suggestion;
+    }, 30);
+  }
+
+  // ---------- database / archive browsing ----------
+  async function openDatabase(){
+    state.syncing = true; render();
+    await loadRegistry();
+    state.syncing = false; render();
+  }
+
+  async function openArchiveBatch(batchCode){
+    state.syncing = true; render();
+    var raw = await sGet("archive::" + batchCode);
+    var list = [];
+    if(raw){ try{ list = JSON.parse(raw) || []; }catch(e){ list = []; } }
+    list.sort(function(a,b){ return (b.total||0) - (a.total||0); });
+    state.archiveCandidates = list;
+    state.viewingArchiveBatch = batchCode;
+    state.syncing = false; render();
+  }
+
+  // ---------- CSV export ----------
+  // Does NOT rely on Blob/createObjectURL or a programmatic .click() -- some sandboxed
+  // WebViews block script-triggered downloads outright. Instead this shows a real tappable
+  // link (a genuine user click always works) plus the raw text so it can be copied manually
+  // as a guaranteed fallback either way.
+  function csvEscape(v){
+    v = (v==null? "" : String(v));
+    if(/[",\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
+    return v;
+  }
+  function rowsToCSVText(rows2D){
+    return rows2D.map(function(r){ return r.map(csvEscape).join(","); }).join("\r\n");
+  }
+  function showExportPanel(filename, rows2D){
+    var csv = rowsToCSVText(rows2D);
+    var dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    state.exportData = { filename: filename, csv: csv, dataUri: dataUri };
+    render();
+  }
+  function closeExportPanel(){ state.exportData = null; render(); }
+  async function copyExportText(){
+    try{
+      await navigator.clipboard.writeText(state.exportData.csv);
+      toast("Copied to clipboard");
+    }catch(e){ toast("Couldn't auto-copy \u2014 tap the box below and copy manually"); }
+  }
+
+  function recordsToCSV(records){
+    var compSet = {};
+    records.forEach(function(r){ (r.competencies||[]).forEach(function(c){ compSet[c.key] = c.label; }); });
+    var compKeys = Object.keys(compSet);
+    var header = ["Batch","Candidate #","Name","Assessors Scored"].concat(compKeys.map(function(k){return compSet[k]+" (avg/5)";})).concat(["Total (/100)","Threshold","Result","Archived At"]);
+    var rows = [header];
+    records.forEach(function(r){
+      var row = [r.batch, r.number, r.name||"", r.assessorCount];
+      compKeys.forEach(function(k){ var v = r.perComp ? r.perComp[k] : null; row.push(v!=null ? v.toFixed(2) : ""); });
+      row.push(r.total!=null ? r.total : "");
+      row.push(r.threshold);
+      row.push(r.total==null ? "Not scored" : (r.pass ? "PASS" : "FAIL"));
+      row.push(r.archivedAt ? new Date(r.archivedAt).toLocaleString() : "");
+      rows.push(row);
+    });
+    return rows;
+  }
+
+  async function exportBatchCSV(batchCode){
+    var raw = await sGet("archive::" + batchCode);
+    var list = [];
+    if(raw){ try{ list = JSON.parse(raw) || []; }catch(e){ list = []; } }
+    if(!list.length){ toast("Nothing archived for this batch yet"); return; }
+    showExportPanel("PIA_CabinCrew_" + batchCode + ".csv", recordsToCSV(list));
+  }
+  async function exportAllCSV(){
+    var reg = await loadRegistry();
+    var all = [];
+    for(var i=0;i<reg.length;i++){
+      var raw = await sGet("archive::" + reg[i].batch);
+      if(raw){ try{ var list = JSON.parse(raw) || []; all = all.concat(list); }catch(e){} }
+    }
+    if(!all.length){ toast("No archived batches yet \u2014 complete & archive a batch first (Setup tab)"); return; }
+    showExportPanel("PIA_CabinCrew_AllBatches.csv", recordsToCSV(all));
+  }
+
+  // ================= RENDER =================
+  function render(){
+    var r = root(); r.innerHTML = "";
+    r.appendChild(buildTopbar());
+    if(state.storageStatus === "failed"){
+      r.appendChild(buildStorageWarning());
+    }
+    var content = document.createElement("div"); content.className = "content";
+    if(state.storageStatus === "checking"){
+      content.appendChild(el("div","empty","Checking connection\u2026"));
+    } else if(state.storageStatus === "needs-setup"){
+      content.appendChild(buildSheetsSetup());
+    } else if(!state.batchLoaded){
+      content.appendChild(buildJoinPrompt());
+    } else if(state.tab === "setup"){ content.appendChild(buildSetup()); }
+    else if(state.tab === "score"){ content.appendChild(buildScore()); }
+    else if(state.tab === "database"){ content.appendChild(buildDatabase()); }
+    else { content.appendChild(buildResults()); }
+    r.appendChild(content);
+    if(state.storageStatus === "ok" || state.storageStatus === "failed") r.appendChild(buildTabbar());
+    var t = document.createElement("div"); t.className = "toast"; t.id = "pia-toast";
+    r.appendChild(t);
+    if(state.exportData) r.appendChild(buildExportOverlay());
+  }
+
+  function buildSheetsSetup(){
+    var wrap = el("div","");
+    var card = el("div","card");
+    card.appendChild(el("div","section-title","One-time setup: connect a data backend"));
+    card.appendChild(el("div","muted",
+      "This page is running as a standalone file (not inside Claude), so it needs its own place to store scores. " +
+      "Paste in your Google Sheets backend link below \u2014 every assessor's device needs the exact same link."
+    ));
+    var field = el("div","field"); field.style.marginTop = "12px";
+    field.appendChild(el("label","","Google Sheets Web App URL"));
+    var inp = document.createElement("input");
+    inp.placeholder = "https://script.google.com/macros/s/.../exec";
+    inp.value = state.sheetsUrlInput;
+    inp.oninput = function(e){ state.sheetsUrlInput = e.target.value; };
+    field.appendChild(inp);
+    card.appendChild(field);
+    if(state.sheetsSetupError){
+      card.appendChild(el("div","flagnote", escapeHtml(state.sheetsSetupError)));
+    }
+    var connectBtn = el("button","btn btn-primary","Connect");
+    connectBtn.style.marginTop = "10px";
+    connectBtn.onclick = connectSheetsBackend;
+    card.appendChild(connectBtn);
+    wrap.appendChild(card);
+
+    var howCard = el("div","card");
+    howCard.appendChild(el("div","section-title","Don't have this link yet?"));
+    howCard.appendChild(el("div","muted",
+      "Ask whoever set this tool up for you for the shared Web App URL. If you're setting it up for the first time, " +
+      "you'll need the companion Google Apps Script file (PIA_Sheets_Backend.gs.txt) and about 5 minutes \u2014 " +
+      "full step-by-step instructions are inside that file's header comments."
+    ));
+    wrap.appendChild(howCard);
+    return wrap;
+  }
+
+  async function connectSheetsBackend(){
+    var url = state.sheetsUrlInput.trim();
+    if(!url || url.indexOf("http") !== 0){
+      state.sheetsSetupError = "That doesn't look like a valid URL yet.";
+      render(); return;
+    }
+    state.storageStatus = "checking"; state.sheetsSetupError = ""; render();
+    saveSheetsUrl(url);
+    var check = await testStorageConnectivity();
+    if(check.ok){
+      state.storageStatus = "ok";
+      await loadManagerPin();
+      var active = await sGet("pia-active-batch");
+      if(active){ await joinBatch(active); } else { await loadRegistry(); }
+      render();
+    } else {
+      state.storageStatus = "needs-setup";
+      state.sheetsSetupError = check.reason || "Couldn't connect \u2014 double check the URL and that the deployment access is set to \"Anyone\".";
+      render();
+    }
+  }
+
+  function buildStorageWarning(){
+    var w = el("div","");
+    w.style.cssText = "background:#B3261E; color:#fff; padding:14px 16px; font-size:13px; line-height:1.6;";
+    w.innerHTML =
+      "<b>\u26A0\uFE0F Live sync is NOT working right now.</b><br>" +
+      escapeHtml(state.storageFailReason) +
+      "<br><br><b>Scores entered here will not be saved or shared with other devices</b> until this is resolved.";
+    return w;
+  }
+  function escapeHtml(s){
+    var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML;
+  }
+
+  function buildExportOverlay(){
+    var overlay = el("div","");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(11,37,69,.55); z-index:60; display:flex; align-items:flex-end; justify-content:center;";
+    var panel = el("div","card");
+    panel.style.cssText = "width:100%; max-width:560px; border-radius:18px 18px 0 0; margin:0; max-height:82vh; overflow-y:auto;";
+    panel.appendChild(el("div","section-title","Export ready"));
+    panel.appendChild(el("div","muted","Tap the link below to download \u2014 it opens/saves directly since this device's browser controls that. If nothing happens, the raw CSV is also shown below to copy and paste into a spreadsheet."));
+    var linkWrap = el("div","");
+    linkWrap.style.cssText = "margin:12px 0;";
+    var a = document.createElement("a");
+    a.href = state.exportData.dataUri;
+    a.download = state.exportData.filename;
+    a.textContent = "\u2B07\uFE0F  " + state.exportData.filename;
+    a.className = "btn btn-primary";
+    a.style.textDecoration = "none";
+    a.target = "_blank";
+    linkWrap.appendChild(a);
+    panel.appendChild(linkWrap);
+    var copyBtn = el("button","btn btn-outline","Copy CSV text to clipboard");
+    copyBtn.onclick = copyExportText;
+    panel.appendChild(copyBtn);
+    var ta = document.createElement("textarea");
+    ta.readOnly = true;
+    ta.value = state.exportData.csv;
+    ta.style.cssText = "width:100%; height:160px; margin-top:12px; font-family:monospace; font-size:11px; border:1px solid var(--line); border-radius:10px; padding:8px;";
+    ta.onclick = function(){ ta.select(); };
+    panel.appendChild(ta);
+    var closeBtn = el("button","btn btn-ghost","Close");
+    closeBtn.style.cssText = "margin-top:12px; width:100%; color:var(--sub); border-color:var(--line);";
+    closeBtn.onclick = closeExportPanel;
+    panel.appendChild(closeBtn);
+    overlay.appendChild(panel);
+    return overlay;
+  }
+
+  function el(tag, cls, html){ var e = document.createElement(tag); if(cls) e.className = cls; if(html!=null) e.innerHTML = html; return e; }
+
+  function buildTopbar(){
+    var bar = el("div","topbar");
+    var row = el("div","row");
+    row.appendChild(el("div","brand","<span class='k'>PIA \u00b7 Inflight Recruitment \u00b7 "+BUILD_VERSION+"</span><span class='t'>Assessment Centre Scoring</span>"));
+    var notOk = state.storageStatus === "failed" || state.storageStatus === "needs-setup" || state.storageStatus === "checking";
+    var syncLabel = state.storageStatus === "needs-setup" ? "Setup needed" : (state.storageStatus === "checking" ? "Connecting" : (state.storageStatus === "failed" ? "Not syncing" : (state.syncing ? "Syncing" : "Synced")));
+    var dotCls = notOk ? "" : (state.syncing ? " busy" : "");
+    var syncEl = el("div","sync","<span class='dot"+dotCls+"'></span><span>"+syncLabel+"</span>");
+    if(notOk) syncEl.querySelector(".dot").style.background = "#FF6B6B";
+    row.appendChild(syncEl);
+    bar.appendChild(row);
+    if(state.batchLoaded){
+      var bl = el("div","batchline");
+      bl.innerHTML = "<span>Batch: <b style='color:#fff'>"+state.batch+"</b></span><span class='statuspill "+state.batchStatus+"'>"+(state.batchStatus==="completed"?"Archived":"Active")+"</span>";
+      bar.appendChild(bl);
+    }
+    return bar;
+  }
+
+  function buildJoinPrompt(){
+    var wrap = el("div","");
+    var card = el("div","card");
+    card.appendChild(el("div","section-title","Join an assessment batch"));
+    card.appendChild(el("div","muted","Enter the batch code your team is using today (e.g. Batch-1). Everyone using the same code sees the same live results and group assignments."));
+    var field = el("div","field");
+    var inp = document.createElement("input");
+    inp.id = "join-batch-input";
+    inp.placeholder = "e.g. Batch-1";
+    inp.value = state.batch;
+    field.appendChild(inp); card.appendChild(field);
+    var btn = el("button","btn btn-primary","Join / Start Batch");
+    btn.onclick = function(){ joinBatch(inp.value); };
+    card.appendChild(btn);
+    wrap.appendChild(card);
+    wrap.appendChild(el("div","card","<div class='muted'><b>First device today?</b> Type a new code and tap Join. <br><br><b>Joining an existing batch?</b> Use the exact same code your Team Lead is using. <br><br><b>Starting Batch-2, 3...?</b> Just join with a new code \u2014 Batch-1's records stay permanently in the Database tab.</div>"));
+    return wrap;
+  }
+
+  function buildTabbar(){
+    var bar = el("div","tabbar");
+    var tabs = [
+      {id:"score", ic:"\u270D\uFE0F", label:"Score"},
+      {id:"results", ic:"\uD83C\uDFC6", label:"Results"},
+      {id:"database", ic:"\uD83D\uDDC4\uFE0F", label:"Database"},
+      {id:"setup", ic:"\u2699\uFE0F", label:"Setup"}
+    ];
+    tabs.forEach(function(t){
+      var b = document.createElement("button");
+      b.className = state.tab===t.id ? "active":"";
+      b.innerHTML = "<span class='ic'>"+t.ic+"</span><span>"+t.label+"</span>";
+      b.onclick = function(){
+        state.tab = t.id;
+        if(t.id==="results" && state.batchLoaded) refreshResults();
+        else if(t.id==="database"){ state.viewingArchiveBatch=null; openDatabase(); }
+        else render();
+      };
+      bar.appendChild(b);
+    });
+    return bar;
+  }
+
+  // ---------- SETUP ----------
+  function buildSetup(){
+    var wrap = el("div","");
+    var archived = state.batchStatus === "completed";
+
+    if(archived){
+      var lockCard = el("div","card");
+      lockCard.appendChild(el("div","section-title","This batch is archived"));
+      lockCard.appendChild(el("div","muted","Its final scorecards are saved permanently in the Database tab. Scoring and settings are locked to keep that record trustworthy."));
+      var newBatchBtn = el("button","btn btn-gold","Start New Batch");
+      newBatchBtn.style.marginTop = "10px";
+      newBatchBtn.onclick = startNewBatchFlow;
+      lockCard.appendChild(newBatchBtn);
+      wrap.appendChild(lockCard);
+
+      var unlockCard = el("div","card");
+      unlockCard.appendChild(el("div","section-title","Manager unlock"));
+      unlockCard.appendChild(el("div","muted","Enter the manager PIN to reopen this batch for corrections (re-scoring, weight or candidate changes). It will need to be archived again afterward."));
+      var pinRow = el("div","addrow");
+      pinRow.style.marginTop = "10px";
+      var pinInp = document.createElement("input");
+      pinInp.type = "password"; pinInp.placeholder = "Manager PIN"; pinInp.value = state.unlockPinInput;
+      pinInp.oninput = function(e){ state.unlockPinInput = e.target.value; };
+      pinRow.appendChild(pinInp);
+      unlockCard.appendChild(pinRow);
+      var unlockBtn = el("button","btn btn-primary","Unlock this batch");
+      unlockBtn.style.marginTop = "10px";
+      unlockBtn.onclick = attemptUnlockBatch;
+      unlockCard.appendChild(unlockBtn);
+      wrap.appendChild(unlockCard);
+    } else {
+      var doneCard = el("div","card");
+      doneCard.appendChild(el("div","section-title","Batch status"));
+      doneCard.appendChild(el("div","muted","When all "+state.candidates.length+" candidates have been fully scored, complete and archive this batch to lock it in and save final scorecards to the HR database."));
+      if(!state.confirmingArchive){
+        var archBtn = el("button","btn btn-primary","Complete & Archive This Batch");
+        archBtn.style.marginTop = "10px";
+        archBtn.onclick = requestArchiveConfirm;
+        doneCard.appendChild(archBtn);
+      } else {
+        var warn = el("div","flagnote","Archive "+state.batch+"? Final scorecards for all "+state.candidates.length+" candidates will be saved permanently to the HR database. Scoring for this batch will then be locked. This can't be undone.");
+        warn.style.marginTop = "10px";
+        doneCard.appendChild(warn);
+        var confirmBtn = el("button","btn btn-primary","Yes, archive now");
+        confirmBtn.style.marginTop = "10px";
+        confirmBtn.onclick = archiveBatch;
+        doneCard.appendChild(confirmBtn);
+        var cancelBtn = el("button","btn btn-ghost","Cancel");
+        cancelBtn.style.cssText = "margin-top:8px;width:100%;";
+        cancelBtn.onclick = cancelArchiveConfirm;
+        doneCard.appendChild(cancelBtn);
+      }
+      wrap.appendChild(doneCard);
+    }
+
+    wrap.appendChild(el("div","section-title","Competency weights"));
+    var wcard = el("div","card");
+    var total = 0;
+    state.config.competencies.forEach(function(comp){
+      total += Number(comp.weight)||0;
+      var row = el("div","weightrow");
+      row.appendChild(el("div","lbl", comp.label + " <span class='tag "+(comp.src==="approved"?"approved":"proposed")+"'>"+(comp.src==="approved"?"FROM DECK":"PROPOSED")+"</span>"));
+      var inp = document.createElement("input");
+      inp.type="number"; inp.min=0; inp.max=100; inp.value=comp.weight; inp.disabled = archived;
+      inp.oninput = function(e){ comp.weight = Number(e.target.value)||0; renderWeightTotal(); };
+      row.appendChild(inp); row.appendChild(el("span","pct","%"));
+      wcard.appendChild(row);
+    });
+    var totRow = el("div","weighttotal");
+    totRow.appendChild(el("b","","Total"));
+    var totVal = el("div","val "+(total===100?"ok":"bad"), total+"%"); totVal.id="weight-total-val";
+    totRow.appendChild(totVal); wcard.appendChild(totRow);
+    wcard.appendChild(el("div","flagnote","Two competencies are marked <b>PROPOSED</b> because the source scorecard only totalled 74% (labelled \u201cexcerpt\u201d). Adjust weights to total 100%, then save."));
+    if(!archived){
+      var saveBtn = el("button","btn btn-primary","Save weights"); saveBtn.style.marginTop="12px";
+      saveBtn.onclick = function(){
+        var currentTot = state.config.competencies.reduce(function(s,c){return s+(Number(c.weight)||0);},0);
+        if(currentTot !== 100){
+          toast("Weights must total exactly 100% (currently " + currentTot + "%)");
+          return;
+        }
+        saveConfig();
+      };
+      wcard.appendChild(saveBtn);
+    }
+    wrap.appendChild(wcard);
+
+    wrap.appendChild(el("div","section-title","Pass / fail cutoff"));
+    var tcard = el("div","card");
+    var tfield = el("div","field"); tfield.appendChild(el("label","","Minimum weighted score to pass (out of 100)"));
+    var tinp = document.createElement("input");
+    tinp.type="number"; tinp.min=0; tinp.max=100; tinp.value=state.config.threshold; tinp.disabled=archived;
+    tinp.oninput = function(e){ state.config.threshold = Number(e.target.value)||0; };
+    tfield.appendChild(tinp); tcard.appendChild(tfield);
+    tcard.appendChild(el("div","muted","Not stated in the material provided \u2014 defaulted to 70/100. Confirm your approved cutoff."));
+    if(!archived){
+      var tbtn = el("button","btn btn-primary","Save cutoff"); tbtn.style.marginTop="10px"; tbtn.onclick=saveConfig;
+      tcard.appendChild(tbtn);
+    }
+    wrap.appendChild(tcard);
+
+    wrap.appendChild(el("div","section-title","Candidates in this batch"));
+    var ccard = el("div","card");
+    var list = el("div","candlist");
+    state.candidates.forEach(function(c){
+      var chip = el("span","chip", "#"+c.number + (c.name? " \u2013 "+c.name : ""));
+      if(!archived){
+        var rm = document.createElement("button"); rm.textContent="\u00D7";
+        rm.onclick = function(){ state.candidates = state.candidates.filter(function(x){return x.id!==c.id;}); saveCandidates(); render(); };
+        chip.appendChild(rm);
+      }
+      list.appendChild(chip);
+    });
+    ccard.appendChild(list);
+    if(!archived){
+      var addrow = el("div","addrow");
+      var numInp = document.createElement("input"); numInp.placeholder="No."; numInp.type="number";
+      var nameInp = document.createElement("input"); nameInp.placeholder="Name (optional)";
+      addrow.appendChild(numInp); addrow.appendChild(nameInp); ccard.appendChild(addrow);
+      var addBtn = el("button","btn btn-gold","Add candidate"); addBtn.style.marginTop="10px";
+      addBtn.onclick = function(){
+        if(!numInp.value){ toast("Enter a candidate number"); return; }
+        var candNum = Number(numInp.value);
+        var exists = state.candidates.some(function(x){ return x.number === candNum; });
+        if(exists){ toast("Candidate #" + candNum + " already exists in this batch"); return; }
+        var id = "c"+candNum+"_"+Date.now();
+        state.candidates.push({id:id, number:candNum, name:nameInp.value||""});
+        state.candidates.sort(function(a,b){return a.number-b.number;});
+        numInp.value=""; nameInp.value=""; saveCandidates(); render();
+      };
+      ccard.appendChild(addBtn);
+    }
+    wrap.appendChild(ccard);
+
+    var switchCard = el("div","card");
+    switchCard.appendChild(el("div","muted","Batch & Connection management:"));
+    var sBtn = el("button","btn btn-ghost","Leave this batch"); sBtn.style.cssText="margin-top:10px;width:100%;";
+    sBtn.onclick = function(){ state.batchLoaded=false; state.batch=""; render(); };
+    switchCard.appendChild(sBtn);
+    if(transport === "sheets"){
+      var resetBackendBtn = el("button","btn btn-outline","Disconnect / Reset Backend URL");
+      resetBackendBtn.style.cssText = "margin-top:8px;width:100%;color:var(--fail);border-color:var(--fail);";
+      resetBackendBtn.onclick = function(){
+        try{ window.localStorage.removeItem(LS_KEY); }catch(e){}
+        state.storageStatus = "needs-setup";
+        state.sheetsUrlInput = "";
+        state.batchLoaded = false;
+        state.batch = "";
+        toast("Backend URL cleared. Returning to setup screen.");
+        render();
+      };
+      switchCard.appendChild(resetBackendBtn);
+    }
+    wrap.appendChild(switchCard);
+
+    var pinCard = el("div","card");
+    var pinHead = el("div","");
+    pinHead.style.cssText = "display:flex;justify-content:space-between;align-items:center;";
+    pinHead.appendChild(el("div","section-title","Manager PIN"));
+    var togglePin = el("button","linkbtn", state.showPinSettings ? "Hide" : "Change");
+    togglePin.onclick = function(){ state.showPinSettings = !state.showPinSettings; render(); };
+    pinHead.appendChild(togglePin);
+    pinCard.appendChild(pinHead);
+    if(state.showPinSettings){
+      pinCard.appendChild(el("div","muted","Current PIN unlocks any archived batch for corrections (Setup tab, once archived). Change it below."));
+      var npRow = el("div","addrow"); npRow.style.marginTop="10px";
+      var npInp = document.createElement("input");
+      npInp.placeholder = "New PIN"; npInp.value = "";
+      npRow.appendChild(npInp);
+      pinCard.appendChild(npRow);
+      var npBtn = el("button","btn btn-primary","Save new PIN"); npBtn.style.marginTop="10px";
+      npBtn.onclick = function(){ if(npInp.value.trim()) setManagerPin(npInp.value.trim()); };
+      pinCard.appendChild(npBtn);
+    } else {
+      pinCard.appendChild(el("div","muted","Set to protect archived batches from unauthorised re-scoring."));
+    }
+    wrap.appendChild(pinCard);
+
+    var diagCard = el("div","card");
+    var diagHead = el("div","");
+    diagHead.style.cssText = "display:flex;justify-content:space-between;align-items:center;";
+    diagHead.appendChild(el("div","section-title","Diagnostics"));
+    var toggleDiag = el("button","linkbtn", state.showDiagnostics ? "Hide" : "Show raw data");
+    toggleDiag.onclick = function(){ state.showDiagnostics = !state.showDiagnostics; if(state.showDiagnostics) loadDiagnostics(); else render(); };
+    diagHead.appendChild(toggleDiag);
+    diagCard.appendChild(diagHead);
+    if(state.showDiagnostics){
+      diagCard.appendChild(el("div","muted","Exactly what's currently saved in shared storage for this batch \u2014 use this to confirm scores are really persisting."));
+      var refreshDiag = el("button","btn btn-outline","Reload diagnostics"); refreshDiag.style.marginTop="10px";
+      refreshDiag.onclick = loadDiagnostics;
+      diagCard.appendChild(refreshDiag);
+      if(state.diagnostics){
+        var pre = document.createElement("pre");
+        pre.style.cssText = "white-space:pre-wrap; word-break:break-all; font-size:10.5px; background:#F5F6F8; border:1px solid var(--line); border-radius:10px; padding:10px; margin-top:10px; max-height:340px; overflow-y:auto;";
+        pre.textContent = state.diagnostics;
+        diagCard.appendChild(pre);
+      }
+    }
+    wrap.appendChild(diagCard);
+
+    return wrap;
+  }
+
+  async function loadDiagnostics(){
+    state.syncing = true; render();
+    var lines = [];
+    lines.push("BUILD: " + BUILD_VERSION);
+    lines.push("BATCH: " + state.batch + "  (status: " + state.batchStatus + ")");
+    lines.push("");
+    var cfgRaw = await sGet(state.batch + "::config");
+    lines.push("config key [" + state.batch + "::config]:");
+    lines.push(cfgRaw || "(nothing stored)");
+    lines.push("");
+    var candRaw = await sGet(state.batch + "::candidates");
+    lines.push("candidates key [" + state.batch + "::candidates]:");
+    lines.push(candRaw || "(nothing stored)");
+    lines.push("");
+    lines.push("--- per-candidate score blobs ---");
+    for(var i=0;i<state.candidates.length;i++){
+      var c = state.candidates[i];
+      var raw = await sGet(candidateScoresKey(c.id));
+      lines.push("#"+c.number+" ["+candidateScoresKey(c.id)+"]:");
+      lines.push(raw || "(nothing stored -- no assessor has successfully saved a score for this candidate)");
+      lines.push("");
+    }
+    var archRaw = await sGet("archive::" + state.batch);
+    lines.push("--- archive record [archive::" + state.batch + "] ---");
+    lines.push(archRaw || "(not archived, or archive write never succeeded)");
+    state.diagnostics = lines.join("\n");
+    state.syncing = false;
+    render();
+  }
+  function renderWeightTotal(){
+    var total = state.config.competencies.reduce(function(s,c){return s+(Number(c.weight)||0);},0);
+    var v = document.getElementById("weight-total-val");
+    if(v){ v.textContent = total+"%"; v.className = "val "+(total===100?"ok":"bad"); }
+  }
+
+  // ---------- SCORE ----------
+  function buildScore(){
+    var wrap = el("div","");
+    if(state.batchStatus === "completed"){
+      wrap.appendChild(el("div","archived-banner","\uD83D\uDD12 <b>This batch is archived.</b><br>Scoring is locked. View final results in the Database tab, or start a new batch from Setup."));
+      return wrap;
+    }
+
+    var card = el("div","card");
+    card.appendChild(el("div","section-title","Assessor"));
+    var abar = el("div","assessorbar");
+    var ainp = document.createElement("input");
+    ainp.placeholder = "Your name"; ainp.value = state.assessorName;
+    ainp.oninput = function(e){ state.assessorName = e.target.value; };
+    ainp.onblur = function(){ state.myGroup.forEach(function(id){ loadMyExistingScore(id); }); render(); };
+    abar.appendChild(ainp); card.appendChild(abar);
+    wrap.appendChild(card);
+
+    if(!state.groupConfirmed){
+      var pickCard = el("div","card");
+      pickCard.appendChild(el("div","section-title","Choose up to "+MAX_GROUP+" candidates to observe"));
+      pickCard.appendChild(el("div","muted","During a group exercise, watch and score 2\u20133 candidates at once instead of one at a time \u2014 select who you're assigned to, then tap Start."));
+      var grid = el("div","grid8");
+      state.candidates.forEach(function(c){
+        var b = document.createElement("button");
+        var picked = state.myGroup.indexOf(c.id) !== -1;
+        b.className = "candbtn" + (picked?" active":"");
+        b.innerHTML = "#"+c.number + (c.name?"<small>"+c.name+"</small>":"<small>&nbsp;</small>") + (picked ? "<span class='selnum'>"+(state.myGroup.indexOf(c.id)+1)+"</span>" : "");
+        b.onclick = function(){
+          var idx = state.myGroup.indexOf(c.id);
+          if(idx !== -1){ state.myGroup.splice(idx,1); }
+          else{
+            if(state.myGroup.length >= MAX_GROUP){ toast("Max "+MAX_GROUP+" candidates at a time"); return; }
+            state.myGroup.push(c.id);
+          }
+          render();
+        };
+        grid.appendChild(b);
+      });
+      pickCard.appendChild(grid);
+      var startBtn = el("button","btn btn-primary","Start scoring ("+state.myGroup.length+" selected)");
+      startBtn.disabled = state.myGroup.length===0;
+      startBtn.style.marginTop="12px";
+      startBtn.onclick = function(){
+        if(!state.myGroup.length) return;
+        state.groupConfirmed = true;
+        state.activeGroupCandId = state.myGroup[0];
+        Promise.all(state.myGroup.map(loadMyExistingScore)).then(render);
+      };
+      pickCard.appendChild(startBtn);
+      wrap.appendChild(pickCard);
+      return wrap;
+    }
+
+    var groupCard = el("div","card");
+    var strip = el("div","tabstrip");
+    state.myGroup.forEach(function(candId){
+      var c = state.candidates.filter(function(x){return x.id===candId;})[0];
+      if(!c) return;
+      var chip = document.createElement("button");
+      var isSaved = !!state.myScoresByCandidate[candId];
+      var d = state.draftScoresByCand[candId] || {};
+      var hasUnsaved = Object.keys(d).length > 0 && !isSaved;
+      chip.className = "tabchip" + (state.activeGroupCandId===candId ? " active":"") + (hasUnsaved ? " unsaved":"");
+      chip.innerHTML = "#"+c.number + (isSaved ? "<span class='chk'>\u2713</span>" : (hasUnsaved ? "<span class='chk unsaved-dot'>!</span>" : ""));
+      chip.onclick = function(){ switchActiveCandidate(candId); };
+      strip.appendChild(chip);
+    });
+    groupCard.appendChild(strip);
+    var savedCount = state.myGroup.filter(function(id){ return !!state.myScoresByCandidate[id]; }).length;
+    groupCard.appendChild(el("div","muted", savedCount + " of " + state.myGroup.length + " in this group saved. Switching between them auto-saves a finished rating \u2014 an orange \u201c!\u201d means started but not yet finished."));
+    var changeBtn = el("button","linkbtn","Change my candidates");
+    changeBtn.onclick = function(){ leaveGroupScoring(); };
+    groupCard.appendChild(changeBtn);
+    wrap.appendChild(groupCard);
+
+    var overallSaved = state.candidates.filter(function(c){ return !!state.myScoresByCandidate[c.id]; }).length;
+    wrap.appendChild(el("div","progressline", "You've saved scores for " + overallSaved + " of " + state.candidates.length + " candidates in this batch so far."));
+
+    var candId = state.activeGroupCandId;
+    var c = state.candidates.filter(function(x){return x.id===candId;})[0];
+    if(c){
+      var sCard = el("div","card");
+      var head = el("div","scoring-head");
+      head.appendChild(el("div","who","Rating #"+c.number + (c.name?" \u2013 "+c.name:"")));
+      var dd = state.draftScoresByCand[candId] || {};
+      head.appendChild(el("div","prog",Object.keys(dd).length+"/"+state.config.competencies.length));
+      sCard.appendChild(head);
+      sCard.appendChild(el("div","muted","Tap a score 1\u20135 for each competency."));
+
+      state.config.competencies.forEach(function(comp){
+        var cc = el("div","comp-card");
+        var lblRow = el("div","complabel");
+        lblRow.appendChild(el("span","name",comp.label));
+        lblRow.appendChild(el("span","w",comp.weight+"% weight"));
+        cc.appendChild(lblRow);
+        var scale = el("div","scale5");
+        SCALE.forEach(function(s){
+          var b = document.createElement("button");
+          b.className = (dd[comp.key]===s.n) ? "sel" : "";
+          b.innerHTML = "<span class='n'>"+s.n+"</span><span class='d'>"+s.d+"</span>";
+          b.onclick = function(){
+            if(!state.draftScoresByCand[candId]) state.draftScoresByCand[candId] = {};
+            state.draftScoresByCand[candId][comp.key] = s.n;
+            render();
+          };
+          scale.appendChild(b);
+        });
+        cc.appendChild(scale);
+        sCard.appendChild(cc);
+      });
+
+      var submitBtn = el("button","btn btn-primary", state.myScoresByCandidate[candId] ? "Update score" : "Save score");
+      submitBtn.style.marginTop="6px";
+      submitBtn.onclick = function(){ submitScore(candId); };
+      sCard.appendChild(submitBtn);
+      wrap.appendChild(sCard);
+    }
+    return wrap;
+  }
+
+  // Auto-saves the candidate you're leaving if their rating is complete, so switching tabs
+  // (or leaving group mode) can never silently discard a finished-but-unsaved rating -- this
+  // was the root cause of scores appearing to vanish for everyone except whichever candidate
+  // was explicitly saved last.
+  async function autoSaveIfComplete(candId){
+    if(!candId) return;
+    if(state.batchStatus === "completed") return;
+    var comps = state.config.competencies;
+    var d = state.draftScoresByCand[candId] || {};
+    var complete = comps.length > 0 && comps.every(function(comp){ return !!d[comp.key]; });
+    if(!complete) return;
+    // Skip if nothing actually changed since the last save for this candidate.
+    var already = state.myScoresByCandidate[candId];
+    if(already && JSON.stringify(already.scores) === JSON.stringify(d)) return;
+    await submitScoreSilently(candId);
+  }
+  async function switchActiveCandidate(newCandId){
+    var prev = state.activeGroupCandId;
+    if(prev && prev !== newCandId) await autoSaveIfComplete(prev);
+    state.activeGroupCandId = newCandId;
+    render();
+  }
+  async function leaveGroupScoring(){
+    var prev = state.activeGroupCandId;
+    if(prev) await autoSaveIfComplete(prev);
+    state.myGroup=[]; state.groupConfirmed=false; state.activeGroupCandId=null;
+    render();
+  }
+
+  // ---------- RESULTS ----------
+  function summaryStats(results, total){
+    var scored = results.filter(function(r){return r.total!=null;}).length;
+    var passed = results.filter(function(r){return r.pass===true;}).length;
+    var failed = results.filter(function(r){return r.pass===false;}).length;
+    var bar = el("div","summarybar");
+    bar.appendChild(el("div","stat","<div class='n'>"+scored+"/"+total+"</div><div class='l'>Scored</div>"));
+    bar.appendChild(el("div","stat","<div class='n pass'>"+passed+"</div><div class='l'>Passed</div>"));
+    bar.appendChild(el("div","stat","<div class='n fail'>"+failed+"</div><div class='l'>Failed</div>"));
+    return bar;
+  }
+
+  function buildResults(){
+    var wrap = el("div","");
+    var head = el("div","card");
+    head.appendChild(el("div","section-title","Live leaderboard \u2014 "+state.batch));
+    head.appendChild(el("div","muted","Averages every assessor's submitted score per competency, applies your weights, and compares to the "+state.config.threshold+"/100 pass line."));
+    var refreshBtn = el("button","btn btn-gold","Refresh now"); refreshBtn.style.marginTop="10px";
+    refreshBtn.onclick = refreshResults;
+    head.appendChild(refreshBtn);
+    wrap.appendChild(head);
+
+    if(!state.results.length){ wrap.appendChild(el("div","empty","No candidates configured yet. Add candidates in Setup.")); return wrap; }
+
+    wrap.appendChild(summaryStats(state.results, state.candidates.length));
+
+    state.results.forEach(function(r, idx){
+      var row = el("div","lb-row");
+      row.appendChild(el("div","lb-rank", r.total!=null ? ("#"+(idx+1)) : "\u2013"));
+      row.appendChild(el("div","lb-num", String(r.number)));
+      var mid = el("div","lb-mid");
+      mid.appendChild(el("div","nm", r.name || ("Candidate "+r.number)));
+      mid.appendChild(el("div","meta", r.assessorCount+" assessor"+(r.assessorCount===1?"":"s")+" scored"+(r.assessorCount>0 && !r.complete ? " \u00b7 incomplete":"")));
+      row.appendChild(mid);
+      var right = el("div","lb-right");
+      right.appendChild(el("div","score", r.total!=null ? (Math.round(r.total)+"/100") : "\u2014"));
+      var badgeCls = r.total==null ? "pending" : (r.pass?"pass":"fail");
+      var badgeTxt = r.total==null ? "Not yet scored" : (r.pass?"PASS":"FAIL");
+      right.appendChild(el("span","badge "+badgeCls, badgeTxt));
+      row.appendChild(right);
+      row.onclick = function(){ state.expandedResultId = (state.expandedResultId===r.id)?null:r.id; render(); };
+      wrap.appendChild(row);
+      if(state.expandedResultId === r.id) wrap.appendChild(buildScorecardDetail(r, state.config.competencies));
+    });
+    return wrap;
+  }
+
+  function buildScorecardDetail(r, competencies){
+    var card = el("div","card"); card.style.marginTop="-4px";
+    competencies.forEach(function(comp){
+      var v = r.perComp[comp.key];
+      card.appendChild(el("div","detail-row","<span>"+comp.label+"</span><b>"+(v!=null? v.toFixed(1)+"/5":"\u2014")+"</b>"));
+    });
+    if(r.entries && r.entries.length){
+      var sub = el("div","detail");
+      sub.appendChild(el("div","muted","<b>By assessor:</b>"));
+      r.entries.forEach(function(e){
+        sub.appendChild(el("div","detail-row","<span>"+e.assessor+"</span><b>"+new Date(e.ts).toLocaleTimeString()+"</b>"));
+      });
+      card.appendChild(sub);
+    }
+    return card;
+  }
+
+  // ---------- DATABASE ----------
+  function buildDatabase(){
+    var wrap = el("div","");
+
+    if(state.viewingArchiveBatch){
+      var back = el("div","backrow");
+      var bb = document.createElement("button"); bb.className="backbtn"; bb.innerHTML="\u2190 All batches";
+      bb.onclick = function(){ state.viewingArchiveBatch=null; render(); };
+      back.appendChild(bb); wrap.appendChild(back);
+
+      var headCard = el("div","card");
+      headCard.appendChild(el("div","section-title", state.viewingArchiveBatch));
+      var expBtn = el("button","btn btn-outline","Export this batch (CSV)"); expBtn.style.marginTop="8px";
+      expBtn.onclick = function(){ exportBatchCSV(state.viewingArchiveBatch); };
+      headCard.appendChild(expBtn);
+      wrap.appendChild(headCard);
+
+      var results = state.archiveCandidates.map(function(r){ return Object.assign({}, r, {complete:true}); });
+      wrap.appendChild(summaryStats(results, results.length));
+
+      results.forEach(function(r, idx){
+        var row = el("div","lb-row");
+        row.appendChild(el("div","lb-rank","#"+(idx+1)));
+        row.appendChild(el("div","lb-num", String(r.number)));
+        var mid = el("div","lb-mid");
+        mid.appendChild(el("div","nm", r.name || ("Candidate "+r.number)));
+        mid.appendChild(el("div","meta", r.assessorCount+" assessor"+(r.assessorCount===1?"":"s")+" scored"));
+        row.appendChild(mid);
+        var right = el("div","lb-right");
+        right.appendChild(el("div","score", r.total!=null ? (Math.round(r.total)+"/100") : "\u2014"));
+        var badgeCls = r.total==null ? "pending" : (r.pass?"pass":"fail");
+        right.appendChild(el("span","badge "+badgeCls, r.total==null?"Not scored":(r.pass?"PASS":"FAIL")));
+        row.appendChild(right);
+        row.onclick = function(){ state.expandedArchiveId = (state.expandedArchiveId===r.id)?null:r.id; render(); };
+        wrap.appendChild(row);
+        if(state.expandedArchiveId === r.id) wrap.appendChild(buildScorecardDetail(r, r.competencies));
+      });
+      return wrap;
+    }
+
+    var head = el("div","card");
+    head.appendChild(el("div","section-title","HR Records \u2014 All Batches"));
+    head.appendChild(el("div","muted","Permanent scorecards for every archived batch. Tap a batch to see individual candidate results, or export for HR records."));
+    var expAllBtn = el("button","btn btn-gold","Export all batches (CSV)"); expAllBtn.style.marginTop="10px";
+    expAllBtn.onclick = exportAllCSV;
+    head.appendChild(expAllBtn);
+    wrap.appendChild(head);
+
+    if(!state.registry.length){ wrap.appendChild(el("div","empty","No batches yet. Join or start one from the Score tab.")); return wrap; }
+
+    state.registry.forEach(function(b){
+      var card = el("div","batchcard");
+      var top = el("div","top");
+      top.appendChild(el("div","name", b.batch));
+      top.appendChild(el("span","statuspill "+(b.status||"active"), b.status==="completed"?"Archived":"Active"));
+      card.appendChild(top);
+      var metaTxt = (b.candidateCount||0)+" candidates";
+      if(b.status==="completed"){ metaTxt += " \u00b7 "+(b.passCount||0)+" passed \u00b7 archived "+new Date(b.completedAt).toLocaleDateString(); }
+      else { metaTxt += " \u00b7 in progress"; }
+      card.appendChild(el("div","meta", metaTxt));
+      card.onclick = function(){
+        if(b.status==="completed") openArchiveBatch(b.batch);
+        else toast("Complete & archive this batch first (Setup tab) to view its permanent record");
+      };
+      wrap.appendChild(card);
+    });
+    return wrap;
+  }
+
+  // ---------- boot ----------
+  async function boot(){
+    render();
+    var check = await testStorageConnectivity();
+    if(!check.ok){
+      if(check.needsSetup){
+        state.storageStatus = "needs-setup";
+        state.sheetsSetupError = check.reason || "";
+        render();
+        return; // wait for the user to paste in a backend URL
+      }
+      state.storageStatus = "failed";
+      state.storageFailReason = check.reason;
+      render();
+      return; // don't pretend the rest of the app works if sync can't happen at all
+    }
+    state.storageStatus = "ok";
+    await loadManagerPin();
+    var active = await sGet("pia-active-batch");
+    if(active){ await joinBatch(active); }
+    else { await loadRegistry(); }
+    render();
+    setInterval(function(){
+      if(!document.hidden && state.tab === "results" && state.batchLoaded) refreshResults();
+    }, 6000);
+    setInterval(async function(){
+      if(document.hidden) return;
+      // periodic re-check in case connectivity drops mid-session
+      var c = await testStorageConnectivity();
+      if(!c.ok && state.storageStatus === "ok"){
+        state.storageStatus = "failed"; state.storageFailReason = c.reason; render();
+      } else if(c.ok && state.storageStatus === "failed"){
+        state.storageStatus = "ok"; render();
+      }
+    }, 15000);
+  }
+  boot();
+})();
+</script>
